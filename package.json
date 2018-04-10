@@ -1,0 +1,15 @@
+{
+  "name": "liveblog-shared-tools",
+  "version": "0.0.1",
+  "description": "Liveblog Shared Tools",
+  "author": "Helmy Giacoman <helmy.giacoman@sourcefabric.org>",
+  "license": "AGPL-3.0",
+
+  "dependencies": {
+    "nunjucks": "3.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:eos87/liveblog-shared-tools"
+  }
+}
