@@ -19,7 +19,7 @@ class ThemeTemplatesLoader extends ChoiceLoader {
 
         const CWD = process.cwd();
         const themePath = path.resolve(`${CWD}`);
-        const themeTemplatesPath = path.resolve(themePath, 'templates');
+        const themeTemplatesPath = path.resolve(themePath, 'templates/');
 
         // default theme `templates/` folder
         this.loaders.push(new FileSystemLoader(themeTemplatesPath));
@@ -29,16 +29,17 @@ class ThemeTemplatesLoader extends ChoiceLoader {
 
         if (theme.extends) {
             const parentThemePath = path.resolve(`${CWD}/node_modules/liveblog-${theme.extends}-theme/`);
-            const parentTemplatesPath = path.resolve(parentThemePath, 'templates');
+            const parentTemplatesPath = path.resolve(parentThemePath, 'templates/');
             let mappings = {};
 
-            mappings[`${theme.extends}`] = new FileSystemLoader(themeTemplatesPath);
-            let parentLoader = new PrefixLoader(mappings);
+            mappings[`${theme.extends}`] = new FileSystemLoader(parentTemplatesPath);
+            let parentPrefixLoader = new PrefixLoader(mappings);
 
-            // parent theme root directory as fallback
-            this.loaders.push(new FileSystemLoader(themePath));
+            // adding parent theme root directory and templates/ dir as fallback
+            this.loaders.push(new FileSystemLoader(parentThemePath));
+            this.loaders.push(new FileSystemLoader(parentTemplatesPath));
 
-            this.loaders.push(parentLoader);
+            this.loaders.push(parentPrefixLoader);
             // TODO: add support for another level of parent inheritance (parent of parent)
         }
     }

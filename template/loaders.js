@@ -33,14 +33,16 @@ class PrefixLoader extends Loader {
         const loader = this.mappings[prefix];
 
         if (typeof prefix === 'undefined')
-            return null;
+            return [null, name];
 
-        return loader;
+        return [loader, name];
     }
 
     getSource(name) {
-        const loader = this.getLoader(name);
-        return loader.getSource(name);
+        const [loader, template] = this.getLoader(name);
+
+        if (loader === null) return null;
+        return loader.getSource(template);
     }
 }
 
@@ -68,13 +70,14 @@ class ChoiceLoader extends Loader {
     }
 
     getSource(template) {
-        for (let loader of this.loaders) {
-            source = loader.getSource(template)
+        let source = null;
 
+        for (let loader of this.loaders) {
+            source = loader.getSource(template);
             if (source) return source;
         }
 
-        return null;
+        return source;
     }
 }
 
