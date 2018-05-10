@@ -4,9 +4,8 @@
   "description": "Liveblog Shared Tools",
   "author": "Helmy Giacoman <helmy.giacoman@sourcefabric.org>",
   "license": "AGPL-3.0",
-
   "dependencies": {
-    "nunjucks": "^3.1.2"
+    "nunjucks": "^3.0.1"
   },
   "repository": {
     "type": "git",
