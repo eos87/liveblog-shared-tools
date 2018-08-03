@@ -29,11 +29,15 @@ class PrefixLoader extends Loader {
     }
 
     getLoader(template) {
-        const [prefix, name] = template.split(this.delimiter);
-        const loader = this.mappings[prefix];
+        //this means template without prefix
+        if (template.indexOf(this.delimiter) === -1)
+          return [null, template]
 
-        if (typeof prefix === 'undefined')
-            return [null, name];
+        // attention: loader of the `prefix` could be undefined when referencing
+        // a template that does not exists
+        const prefix = template.split(this.delimiter, 1)[0];
+        const loader = this.mappings[prefix];
+        const name = template.substr(prefix.length + 1);
 
         return [loader, name];
     }
@@ -41,7 +45,11 @@ class PrefixLoader extends Loader {
     getSource(name) {
         const [loader, template] = this.getLoader(name);
 
-        if (loader === null) return null;
+        //hey! carefully here below, see that Abstract Equality Comparison is used
+        // (== or double equal, whatever) where null is equal to undefined
+        // so `loader` could either be null or undefined :)
+        if (loader == undefined) return null;
+
         return loader.getSource(template);
     }
 }
@@ -81,7 +89,4 @@ class ChoiceLoader extends Loader {
     }
 }
 
-module.exports = {
-    PrefixLoader: PrefixLoader,
-    ChoiceLoader: ChoiceLoader
-}
+module.exports = { PrefixLoader, ChoiceLoader }

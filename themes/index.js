@@ -1,7 +1,31 @@
 const path = require('path');
-const {FileSystemLoader} = require('nunjucks');
-const {PrefixLoader, ChoiceLoader} = require('../template/loaders');
+const { FileSystemLoader } = require('nunjucks');
+const { PrefixLoader, ChoiceLoader } = require('../template/loaders');
+const { buildThemePath } = require('./utils');
 
+const CWD = process.cwd();
+
+
+/**
+ * Recursive function that looks for parent themes and their templates paths
+ * @param {object} theme Theme json data extracted from theme.json file
+ * @return {array}
+ */
+const buildParentPaths = (theme, paths) => {
+  const themePath = buildThemePath(theme.name);
+  const templatesPath = path.resolve(themePath, 'templates/');
+
+  paths.push(templatesPath);
+
+  if (theme.extends) {
+    const parentThemePath = buildThemePath(theme.extends);
+    const parentTheme = require(`${parentThemePath}/theme.json`);
+
+    buildParentPaths(parentTheme, paths);
+  }
+
+  return paths;
+}
 
 class ThemeTemplatesLoader extends ChoiceLoader {
     /**
@@ -12,40 +36,44 @@ class ThemeTemplatesLoader extends ChoiceLoader {
      *
      * @param {JSON} theme Theme json data extracted from theme.json file
      */
-    constructor(theme) {
-        super([]);
+    constructor(theme, delimiter = '/') {
+      super();
 
-        this.loaders = [];
+      this.loaders = [];
+      this.delimiter = delimiter;
+      this.prefixMappings = {};
 
-        const CWD = process.cwd();
-        const themePath = path.resolve(`${CWD}`);
+      const themePath = path.resolve(`${CWD}`);
+      let self = this;
+
+      const handleNestedLevels = (theme, themePath) => {
         const themeTemplatesPath = path.resolve(themePath, 'templates/');
 
         // default theme `templates/` folder
-        this.loaders.push(new FileSystemLoader(themeTemplatesPath));
-
-        // theme root directory as fallback
-        this.loaders.push(new FileSystemLoader(themePath));
+        self.loaders.push(new FileSystemLoader(themeTemplatesPath));
 
         if (theme.extends) {
-            const parentThemePath = path.resolve(`${CWD}/node_modules/liveblog-${theme.extends}-theme/`);
-            const parentTemplatesPath = path.resolve(parentThemePath, 'templates/');
-            let mappings = {};
+          const prefix = theme.extends;
+          const parentThemePath = buildThemePath(prefix);
+          const parentTheme = require(`${parentThemePath}/theme.json`);
 
-            mappings[`${theme.extends}`] = new FileSystemLoader(parentTemplatesPath);
-            let parentPrefixLoader = new PrefixLoader(mappings);
+          let compoundPaths = [];
+          compoundPaths = buildParentPaths(parentTheme, compoundPaths)
 
-            // adding parent theme root directory and templates/ dir as fallback
-            this.loaders.push(new FileSystemLoader(parentThemePath));
-            this.loaders.push(new FileSystemLoader(parentTemplatesPath));
+          self.prefixMappings[prefix] = new FileSystemLoader(compoundPaths);
 
-            this.loaders.push(parentPrefixLoader);
-            // TODO: add support for another level of parent inheritance (parent of parent)
+          //keep looking for parents prefixes
+          handleNestedLevels(parentTheme, parentThemePath)
         }
+      }
+
+      // populate the prefix map
+      handleNestedLevels(theme, themePath);
+
+      // then create the prefixLoader instance and append it to loaders
+      self.loaders.push(new PrefixLoader(self.prefixMappings), delimiter);
     }
 }
 
 
-module.exports = {
-    ThemeTemplatesLoader: ThemeTemplatesLoader
-}
+module.exports = { ThemeTemplatesLoader }
