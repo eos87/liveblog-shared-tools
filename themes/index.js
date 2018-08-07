@@ -1,31 +1,10 @@
 const path = require('path');
 const { FileSystemLoader } = require('nunjucks');
 const { PrefixLoader, ChoiceLoader } = require('../template/loaders');
-const { buildThemePath } = require('./utils');
+const { themeDependencyPath } = require('./utils');
 
 const CWD = process.cwd();
 
-
-/**
- * Recursive function that looks for parent themes and their templates paths
- * @param {object} theme Theme json data extracted from theme.json file
- * @return {array}
- */
-const buildParentPaths = (theme, paths) => {
-  const themePath = buildThemePath(theme.name);
-  const templatesPath = path.resolve(themePath, 'templates/');
-
-  paths.push(templatesPath);
-
-  if (theme.extends) {
-    const parentThemePath = buildThemePath(theme.extends);
-    const parentTheme = require(`${parentThemePath}/theme.json`);
-
-    buildParentPaths(parentTheme, paths);
-  }
-
-  return paths;
-}
 
 class ThemeTemplatesLoader extends ChoiceLoader {
     /**
@@ -39,30 +18,26 @@ class ThemeTemplatesLoader extends ChoiceLoader {
     constructor(theme, delimiter = '/') {
       super();
 
+      let self = this;
       this.loaders = [];
       this.delimiter = delimiter;
       this.prefixMappings = {};
 
       const themePath = path.resolve(`${CWD}`);
-      let self = this;
 
       const handleNestedLevels = (theme, themePath) => {
-        const themeTemplatesPath = path.resolve(themePath, 'templates/');
-
         // default theme `templates/` folder
+        const themeTemplatesPath = path.resolve(themePath, 'templates/');
         self.loaders.push(new FileSystemLoader(themeTemplatesPath));
 
         if (theme.extends) {
           const prefix = theme.extends;
-          const parentThemePath = buildThemePath(prefix);
+          const parentThemePath = themeDependencyPath(prefix);
           const parentTheme = require(`${parentThemePath}/theme.json`);
 
-          let compoundPaths = [];
-          compoundPaths = buildParentPaths(parentTheme, compoundPaths)
+          self.prefixMappings[prefix] = new FileSystemLoader(path.resolve(parentThemePath, 'templates/'));
 
-          self.prefixMappings[prefix] = new FileSystemLoader(compoundPaths);
-
-          //keep looking for parents prefixes
+          // keep looking for parents prefixes
           handleNestedLevels(parentTheme, parentThemePath)
         }
       }
